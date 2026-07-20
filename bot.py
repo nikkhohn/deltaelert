@@ -20,12 +20,12 @@ import logging
 import requests
 
 # ---------- Config (fill these in) ----------
-TELEGRAM_BOT_TOKEN = "PASTE_YOUR_BOT_TOKEN_HERE"      # from BotFather
-TELEGRAM_CHAT_ID = "PASTE_YOUR_CHAT_ID_HERE"           # your chat/group id
+TELEGRAM_BOT_TOKEN = "8830611238:AAHpu_cXosdhjgX8BCUXbrW6ktDPqaLTBkE"      # from BotFather
+TELEGRAM_CHAT_ID = "8531722224"           # your chat/group id
 
 POLL_INTERVAL_SEC = 3        # seconds between checks
 UNDERLYING = "BTC"           # change to "ETH" if needed
-PRICE_FIELD = "mark_price"   # or "close"
+PRICE_FIELD = "ask_price"    # ask_price (buying), bid_price, mark_price, or close
 
 DELTA_TICKERS_URL = "https://api.delta.exchange/v2/tickers"
 TELEGRAM_SEND_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -77,9 +77,19 @@ def crossed_threshold(price: float) -> int | None:
     return hit
 
 
+def get_price(t: dict):
+    """Extract the configured price field. ask_price/bid_price live inside
+    the nested 'quotes' object in Delta's ticker response; mark_price/close
+    are top-level fields."""
+    if PRICE_FIELD in ("ask_price", "bid_price"):
+        quotes = t.get("quotes") or {}
+        return quotes.get(PRICE_FIELD)
+    return t.get(PRICE_FIELD)
+
+
 def process_ticker(t: dict):
     symbol = t.get("symbol")
-    price_raw = t.get(PRICE_FIELD)
+    price_raw = get_price(t)
     if symbol is None or price_raw is None:
         return
     try:
